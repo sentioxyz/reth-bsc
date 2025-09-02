@@ -8,9 +8,10 @@ This project aims to bring Reth's high-performance Ethereum client capabilities 
 
 ## Current Status
 
-- ✅ Historical Sync
-- ✅ BSC Pectra Support
-- ✅ Live Sync
+- Historical Sync ✅
+- BSC Pectra Support ✅
+- Live Sync ✅
+- Run as validator ❌ (soon)
 
 ### Sync Status (as of September 1st, 2025)
 

@@ -52,10 +52,10 @@ where ChainSpec: EthChainSpec + BscHardforks + 'static,
 
     /// Get epoch length from header
     pub fn get_epoch_length(&self, header: &Header) -> u64 {
-        if self.spec.is_maxwell_active_at_timestamp(header.timestamp()) {
+        if self.spec.is_maxwell_active_at_timestamp(header.number(), header.timestamp()) {
             return crate::consensus::parlia::snapshot::MAXWELL_EPOCH_LENGTH;
         }
-        if self.spec.is_lorentz_active_at_timestamp(header.timestamp()) {
+        if self.spec.is_lorentz_active_at_timestamp(header.number(), header.timestamp()) {
             return crate::consensus::parlia::snapshot::LORENTZ_EPOCH_LENGTH;
         }
         self.epoch
@@ -81,7 +81,7 @@ where ChainSpec: EthChainSpec + BscHardforks + 'static,
             let end = start + count * VALIDATOR_BYTES_LEN_AFTER_LUBAN;
 
             let mut extra_min_len = end + EXTRA_SEAL_LEN;
-            let is_bohr_active = self.spec.is_bohr_active_at_timestamp(header.timestamp);
+            let is_bohr_active = self.spec.is_bohr_active_at_timestamp(header.number, header.timestamp);
             if is_bohr_active {
                 extra_min_len += TURN_LENGTH_SIZE;
             }
@@ -105,7 +105,7 @@ where ChainSpec: EthChainSpec + BscHardforks + 'static,
     /// Get turn length from header
     pub fn get_turn_length_from_header(&self, header: &Header, epoch_length: u64) -> Result<Option<u8>, ParliaConsensusError> {
         if header.number % epoch_length != 0 ||
-            !self.spec.is_bohr_active_at_timestamp(header.timestamp)
+            !self.spec.is_bohr_active_at_timestamp(header.number, header.timestamp)
         {
             return Ok(None);
         }
@@ -145,7 +145,7 @@ where ChainSpec: EthChainSpec + BscHardforks + 'static,
                 header.extra_data[EXTRA_VANITY_LEN + VALIDATOR_NUMBER_SIZE - 1] as usize;
             let mut start =
                 EXTRA_VANITY_LEN + VALIDATOR_NUMBER_SIZE + validator_count * VALIDATOR_BYTES_LEN_AFTER_LUBAN;
-            let is_bohr_active = self.spec.is_bohr_active_at_timestamp(header.timestamp);
+            let is_bohr_active = self.spec.is_bohr_active_at_timestamp(header.number, header.timestamp);
             if is_bohr_active {
                 start += TURN_LENGTH_SIZE;
             }
@@ -359,7 +359,7 @@ where ChainSpec: EthChainSpec + BscHardforks + 'static,
         }
 
         let mut delay = BACKOFF_TIME_OF_INITIAL;
-        let is_parent_lorentz = self.spec.is_lorentz_active_at_timestamp(parent.timestamp);
+        let is_parent_lorentz = self.spec.is_lorentz_active_at_timestamp(parent.number, parent.timestamp);
         if is_parent_lorentz {
             delay = LORENTZ_BACKOFF_TIME_OF_INITIAL;
         }
@@ -384,12 +384,12 @@ where ChainSpec: EthChainSpec + BscHardforks + 'static,
             // Exclude the recently signed validators and inturn validator
             validators.retain(|addr| {
                 !(snap.sign_recently_by_counts(*addr, &counts) ||
-                    self.spec.is_bohr_active_at_timestamp(header.timestamp) &&
+                    self.spec.is_bohr_active_at_timestamp(header.number, header.timestamp) &&
                         *addr == inturn_addr)
             });
         }
 
-        let mut rng = if self.spec.is_bohr_active_at_timestamp(header.timestamp) {
+        let mut rng = if self.spec.is_bohr_active_at_timestamp(header.number, header.timestamp) {
             let turn_length = snap.turn_length.unwrap_or(DEFAULT_TURN_LENGTH);
             RngSource::new(header.number as i64 / turn_length as i64)
         } else {

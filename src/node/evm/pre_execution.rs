@@ -102,7 +102,7 @@ where
             self.inner_ctx.current_validators = Some((validator_set, vote_addrs_map));
         }
     
-        if self.spec.is_feynman_active_at_timestamp(header.timestamp) &&
+        if self.spec.is_feynman_active_at_timestamp(header.number, header.timestamp) &&
             !self.spec.is_feynman_transition_at_timestamp(header.timestamp, parent_header.timestamp) &&
             is_breathe_block(parent_header.timestamp, header.timestamp)
         {

@@ -4,8 +4,8 @@ use crate::{
     evm::transaction::BscTxEnv,
     hardforks::BscHardforks,
     system_contracts::{
+        get_upgrade_system_contracts, is_system_transaction, SystemContract,
         feynman_fork::ValidatorElectionInfo,
-        get_upgrade_system_contracts, is_system_transaction, SystemContract, STAKE_HUB_CONTRACT,
     },
 };
 use alloy_consensus::{Header, Transaction, TxReceipt};
@@ -30,7 +30,7 @@ use revm::{
 
     },
     state::Bytecode,
-    Database as _, DatabaseCommit,
+    DatabaseCommit,
 };
 use tracing::debug;
 use alloy_eips::eip2935::{HISTORY_STORAGE_ADDRESS, HISTORY_STORAGE_CODE};
@@ -148,7 +148,7 @@ where
             &self.spec,
             self.evm.block().number.to(),
             self.evm.block().timestamp.to(),
-            self.evm.block().timestamp.to::<u64>() - 3_000, /* TODO: how to get parent block
+            self.evm.block().timestamp.to::<u64>() - 3, /* TODO: how to get parent block
                                                              * timestamp? */
         )
         .map_err(|_| BlockExecutionError::msg("Failed to get upgrade system contracts"))?;
@@ -167,16 +167,6 @@ where
         &mut self,
         beneficiary: Address,
     ) -> Result<(), BlockExecutionError> {
-        if !self
-            .evm
-            .db_mut()
-            .storage(STAKE_HUB_CONTRACT, U256::ZERO)
-            .map_err(BlockExecutionError::other)?
-            .is_zero()
-        {
-            return Ok(());
-        }
-
         let txs = self.system_contracts.feynman_contracts_txs();
         for tx in txs {
             self.transact_system_tx(tx.into(), beneficiary)?;
@@ -268,16 +258,18 @@ where
         let state_clear_flag = self.spec.is_spurious_dragon_active_at_block(self.evm.block().number.to());
         self.evm.db_mut().set_state_clear_flag(state_clear_flag);
 
-        if !self.spec.is_feynman_active_at_timestamp(self.evm.block().timestamp.to()) {
+        if !self.spec.is_feynman_active_at_timestamp(self.evm.block().number.to::<u64>(), self.evm.block().timestamp.to::<u64>() - 3) {
             self.upgrade_contracts()?;
         }
-
-        // enable BEP-440/EIP-2935 for historical block hashes from state.
-        if self.spec.is_prague_transition_at_timestamp(self.evm.block().timestamp.to(), self.evm.block().timestamp.to::<u64>() - 3) {
-            self.apply_history_storage_account(self.evm.block().number.to::<u64>())?;
+     
+        // enable BEP-440/EIP-2935 for historical block hashes from state
+        if self.spec.is_pascal_active_at_timestamp(self.evm.block().number.to::<u64>(), self.evm.block().timestamp.to::<u64>()) &&
+            !self.spec.is_pascal_active_at_timestamp(self.evm.block().number.to::<u64>() - 1, self.evm.block().timestamp.to::<u64>() - 3) {
+                self.apply_history_storage_account(self.evm.block().number.to::<u64>())?;
         }
-        if self.spec.is_prague_active_at_timestamp(self.evm.block().timestamp.to()) {
-            self.system_caller.apply_blockhashes_contract_call(self.ctx.base.parent_hash, &mut self.evm)?;
+        if self.spec.is_pascal_active_at_timestamp(self.evm.block().number.to::<u64>(), self.evm.block().timestamp.to::<u64>()) {
+            self.system_caller
+                .apply_blockhashes_contract_call(self.ctx.base.parent_hash, &mut self.evm)?;
         }
 
         Ok(())
@@ -352,11 +344,14 @@ where
             self.deploy_genesis_contracts(self.evm.block().beneficiary)?;
         }
 
-        if self.spec.is_feynman_active_at_timestamp(self.evm.block().timestamp.to()) {
+        if self.spec.is_feynman_active_at_timestamp(self.evm.block().number.to::<u64>(), self.evm.block().timestamp.to::<u64>() - 3) {
             self.upgrade_contracts()?;
         }
-        if self.spec.is_feynman_active_at_timestamp(self.evm.block().timestamp.to()) &&
-            !self.spec.is_feynman_active_at_timestamp(self.evm.block().timestamp.to::<u64>() - 100)
+
+        if self.spec.is_feynman_active_at_timestamp(self.evm.block().number.to::<u64>(), self.evm.block().timestamp.to()) &&
+            !self
+                .spec
+                .is_feynman_active_at_timestamp(self.evm.block().number.to::<u64>() - 1, self.evm.block().timestamp.to::<u64>() - 3)
         {
             self.initialize_feynman_contracts(self.evm.block().beneficiary)?;
         }

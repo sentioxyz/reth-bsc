@@ -92,7 +92,8 @@ impl<ChainSpec: EthChainSpec + BscHardforks + std::fmt::Debug + Send + Sync + 's
         validate_header_base_fee(header, &self.spec)?;
 
         // Ensures that EIP-4844 fields are valid once cancun is active.
-        if self.spec.is_cancun_active_at_timestamp(header.timestamp) {
+        if self.spec.is_london_active_at_block(header.number) && 
+            self.spec.is_cancun_active_at_timestamp(header.timestamp) {
             validate_4844_header_of_bsc(header)?;
         } else if header.blob_gas_used.is_some() {
             return Err(ConsensusError::BlobGasUsedUnexpected)
@@ -100,7 +101,7 @@ impl<ChainSpec: EthChainSpec + BscHardforks + std::fmt::Debug + Send + Sync + 's
             return Err(ConsensusError::ExcessBlobGasUnexpected)
         }
 
-        if self.spec.is_bohr_active_at_timestamp(header.timestamp) {
+        if self.spec.is_bohr_active_at_timestamp(header.number, header.timestamp) {
             if header.parent_beacon_block_root.is_none() ||
                header.parent_beacon_block_root.unwrap() != B256::default()
             {

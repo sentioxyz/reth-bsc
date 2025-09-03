@@ -153,7 +153,8 @@ impl Snapshot {
         }
 
         let header_timestamp = next_header.timestamp();
-        let is_bohr = chain_spec.is_bohr_active_at_timestamp(header_timestamp);
+        let header_number = next_header.number();
+        let is_bohr = chain_spec.is_bohr_active_at_timestamp(header_number, header_timestamp);
         if is_bohr {
             if snap.sign_recently(validator) {
                 tracing::warn!("Failed to apply block due to over-proposed, validator: {:?}, block_number: {:?}", validator, block_number);
@@ -170,7 +171,7 @@ impl Snapshot {
         snap.update_attestation(next_header, attestation);
         snap.recent_proposers.insert(block_number, validator);
 
-        let is_maxwell_active = chain_spec.is_maxwell_active_at_timestamp(header_timestamp);
+        let is_maxwell_active = chain_spec.is_maxwell_active_at_timestamp(header_number, header_timestamp);
         if is_maxwell_active {
             let latest_finalized_block_number = snap.get_finalized_number();
 			// BEP-524: Clear entries up to the latest finalized block
@@ -183,7 +184,7 @@ impl Snapshot {
 			}
         }
 
-        let is_lorentz_active = chain_spec.is_lorentz_active_at_timestamp(header_timestamp);
+        let is_lorentz_active = chain_spec.is_lorentz_active_at_timestamp(header_number, header_timestamp);
         if is_maxwell_active {
             snap.block_interval = MAXWELL_BLOCK_INTERVAL;
         } else if is_lorentz_active {

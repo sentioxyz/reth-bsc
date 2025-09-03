@@ -72,7 +72,7 @@ where
         // update validator set after Feynman upgrade
         let header = self.inner_ctx.header.as_ref().unwrap().clone();
         let parent_header = self.inner_ctx.parent_header.as_ref().unwrap().clone();
-        if self.spec.is_feynman_active_at_timestamp(header.timestamp) &&
+        if self.spec.is_feynman_active_at_timestamp(header.number, header.timestamp) &&
             is_breathe_block(parent_header.timestamp, header.timestamp) &&
             !self.spec.is_feynman_transition_at_timestamp(header.timestamp, parent_header.timestamp)
         {
@@ -160,7 +160,7 @@ where
     ) -> Result<(), BlockExecutionError> {
         let header_ref = header.as_ref().unwrap();
         let epoch_length = self.inner_ctx.snap.as_ref().unwrap().epoch_num;
-        if header_ref.number % epoch_length != 0 || !self.spec.is_bohr_active_at_timestamp(header_ref.timestamp) {
+        if header_ref.number % epoch_length != 0 || !self.spec.is_bohr_active_at_timestamp(header_ref.number, header_ref.timestamp) {
             tracing::trace!("Skip verify turn length, block_number {} is not an epoch boundary, epoch_length: {}", header_ref.number, epoch_length);
             return Ok(());
         }
@@ -186,7 +186,7 @@ where
         &mut self,
         header: &Header,
     ) -> Result<Option<u8>, BlockExecutionError> {
-        if self.spec.is_bohr_active_at_timestamp(header.timestamp) {
+        if self.spec.is_bohr_active_at_timestamp(header.number, header.timestamp) {
             let (to, data) = self.system_contracts.get_turn_length();
             let bz = self.eth_call(to, data)?;
 
@@ -320,7 +320,7 @@ where
 
         // Kepler introduced a max system reward limit, so we need to pay the system reward to the
         // system contract if the limit is not exceeded.
-        if !self.spec.is_kepler_active_at_timestamp(self.evm.block().timestamp.to()) &&
+        if !self.spec.is_kepler_active_at_timestamp(self.evm.block().number.to(), self.evm.block().timestamp.to()) &&
             system_reward_balance < U256::from(MAX_SYSTEM_REWARD)
         {
             let reward_to_system = block_reward >> SYSTEM_REWARD_PERCENT;

@@ -27,6 +27,10 @@ add these 2 cli required to start reth-bsc:
 --db.max-size 7TB
 ```
 
+## Snapshot
+
+Refer to the [SNAPSHOT.md](https://github.com/bnb-chain/reth-bsc/blob/main/SNAPSHOT.md) for snapshot information
+
 ## Contributing
 
 We welcome community contributions! Whether you're interested in helping with historical sync implementation, BSC Pectra support, or live sync functionality, your help is valuable. Please feel free to open issues or submit pull requests. You can reach out to me on [Telegram](https://t.me/loocapro).

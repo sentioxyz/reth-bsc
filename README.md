@@ -26,6 +26,9 @@ add these 2 cli required to start reth-bsc:
 --chain bsc \
 --db.max-size 7TB
 ```
+## Snapshot
+
+Refer to the [SNAPSHOT.md](https://github.com/bnb-chain/reth-bsc/blob/main/SNAPSHOT.md) for snapshot information
 
 ## Contributing
 
